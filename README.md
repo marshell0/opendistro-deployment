@@ -9,7 +9,7 @@ These Open Distro for Elasticsearch deployment scripts are excerpted from produc
 There are 7 ES Nodes in one server, including 1 Master Node, 1 coordinating Node, 1 ingest Node and 4 data Node 
 
 The logic architecture diagram is as below:
-(https://github.com/marshell0/opendistro-deployment/image/logic.png)
+(https://github.com/marshell0/opendistro-deployment/blob/master/image/logic.png)
 
 Logstash running as independent docker in host mode, because we need retrieve the client source IP address, and nginx introduced for load balance accordingly; you can run it as a docker service if no source IP required, then no nginx needed as docker swarm internal load balance will be used.
 
@@ -23,6 +23,8 @@ Script folder description:
 * ssl-key, public/private key generation script
 * util, services deployment/undeployment/status check script
 
+The deployment architecture diagram is as below:
+(https://github.com/marshell0/opendistro-deployment/blob/master/image/deployment.png)
 
 ## Security issue notifications
 
