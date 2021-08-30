@@ -1,21 +1,21 @@
 
 # OpenDistro for Elasticsearch deployment scripts
 
-These Open Distro for Elasticsearch deployment scripts are excerpted from production repository, and were tested running OK. The production resource configuration are as below:
+These Open Distro for Elasticsearch deployment scripts are excerpted from production repository, and were tested running OK. Below are the production resources configuration:
 
 * Hardware, 3 * x86 Servers (40*2 Cores, 3.1GHz, 512G memory, 44T hard disk) 
 * Software, CentOS 7.6, Docker Swarm CE 20.10.5
 
-There are 7 ES Nodes in one server, including 1 Master Node, 1 coordinating Node, 1 ingest Node and 4 data Node 
+7 ES nodes is designed in one physical server, including 1 Master node, 1 coordinating node, 1 ingest node and 4 data nodes. 
 
 The logic architecture diagram is as below:
 (https://github.com/marshell0/opendistro-deployment/blob/master/image/logic.png)
 
-Logstash running as independent docker in host mode, because we need retrieve the client source IP address, and nginx introduced for load balance accordingly; you can run it as a docker service if no source IP required, then no nginx needed as docker swarm internal load balance will be used.
+Logstash running as independent docker in host mode, because we need retrieve the client source IP address, and nginx introduced for load balance accordingly; you can run it as a global docker service if no source IP required, then no nginx required as docker swarm internal load balance will be used.
 
-opendistro image is customized image, with some security configuration files packed inside, such as config.yml with LDAP support, keystore with email username and password, common certificate files, customized alerting and notification jar file, reference to (https://github.com/marshell0/alerting/releases)
+Opendistro image used in the docker-compose.yml is a customized image, with some security configuration files packed inside, such as config.yml with LDAP support, keystore with email username and password added, common certificate files, customized alerting and notification jar files, which you can reference to (https://github.com/marshell0/alerting/releases)
 
-Script folder description:
+Folder of the script files:
 * etc, server host import configurations file need to be set for OpenDistro
 * logstash, logstash configuration and pipeline files
 * nginx, nginx configuration file and start up script
