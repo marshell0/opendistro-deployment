@@ -1,0 +1,2 @@
+Open Distro For Elasticsearch Deployment Script
+Copyright 2016-2021 ubssdic.com, Inc. or its affiliates. All Rights Reserved.
