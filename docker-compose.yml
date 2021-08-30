@@ -1,0 +1,1103 @@
+version: '3.8'
+services:
+  master-1:
+    image: nexus.ubssdic.com:9443/opendistro-for-elasticsearch:1.13.1
+    hostname: master-1
+    environment:
+      - cluster.name=udic-odfe
+      - node.name=master-1
+      - node.attr.rack_id=rack_01
+      # dedicated master node
+      - node.master=true
+      - node.data=false
+      - node.ingest=false  
+      - http.port=9202  # custom port for HTTP
+      - transport.port=9302
+      - discovery.seed_hosts=master-1:9302,master-2:9303,master-3:9304
+      - cluster.initial_master_nodes=master-1,master-2,master-3
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "ES_JAVA_OPTS=-Xms4g -Xmx4g -Des.enforce.bootstrap.checks=true" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+    volumes:
+      - /esdata/master-node/data:/usr/share/elasticsearch/data
+    configs:
+      - source: master-node.pem
+        target: /usr/share/elasticsearch/config/node.pem
+      - source: master-node-key.pem
+        target: /usr/share/elasticsearch/config/node-key.pem
+    ports:
+      - 9202:9202
+    networks:
+      - esnet
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '1'
+          memory: 2G
+      placement:
+        constraints:
+          - node.labels.master-node==true
+          - node.hostname==elk1.ubssdic.com
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  master-2:
+    image: nexus.ubssdic.com:9443/opendistro-for-elasticsearch:1.13.1
+    hostname: master-2
+    environment:
+      - cluster.name=udic-odfe
+      - node.name=master-2
+      - node.attr.rack_id=rack_02
+      # master-eligible data nodes
+      - node.master=true
+      - node.data=false
+      - node.ingest=false  
+      - http.port=9203  # custom port for HTTP
+      - transport.port=9303
+      - discovery.seed_hosts=master-1:9302,master-2:9303,master-3:9304
+      - cluster.initial_master_nodes=master-1,master-2,master-3
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "ES_JAVA_OPTS=-Xms4g -Xmx4g -Des.enforce.bootstrap.checks=true" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+    volumes:
+      - /esdata/master-node/data:/usr/share/elasticsearch/data
+    configs:
+      - source: master-node.pem
+        target: /usr/share/elasticsearch/config/node.pem
+      - source: master-node-key.pem
+        target: /usr/share/elasticsearch/config/node-key.pem
+    networks:
+      - esnet
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '1'
+          memory: 2G
+      placement:
+        constraints:
+          - node.labels.master-node==true
+          - node.hostname==elk2.ubssdic.com
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+ 
+  master-3:
+    image: nexus.ubssdic.com:9443/opendistro-for-elasticsearch:1.13.1
+    hostname: master-3
+    environment:
+      - cluster.name=udic-odfe
+      - node.name=master-3
+      - node.attr.rack_id=rack_03
+      # master-eligible data nodes
+      - node.master=true
+      - node.data=false
+      - node.ingest=false  
+      - http.port=9204  # custom port for HTTP
+      # - transport.host=master-3
+      - transport.port=9304
+      - discovery.seed_hosts=master-1:9302,master-2:9303,master-3:9304
+      - cluster.initial_master_nodes=master-1,master-2,master-3
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "ES_JAVA_OPTS=-Xms4g -Xmx4g -Des.enforce.bootstrap.checks=true" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+    volumes:
+      - /esdata/master-node/data:/usr/share/elasticsearch/data
+    configs:
+      - source: master-node.pem
+        target: /usr/share/elasticsearch/config/node.pem
+      - source: master-node-key.pem
+        target: /usr/share/elasticsearch/config/node-key.pem
+    networks:
+      - esnet
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '1'
+          memory: 2G
+      placement:
+        constraints:
+          - node.labels.master-node==true
+          - node.hostname==elk3.ubssdic.com
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+  
+  coordinating:
+    image: nexus.ubssdic.com:9443/opendistro-for-elasticsearch:1.13.1
+    hostname: coordinating
+    environment:
+      - cluster.name=udic-odfe
+      - node.name=coordinating
+      # coordinating only node
+      - node.master=false
+      - node.data=false
+      - node.ingest=false  
+      - http.port=9200  # custom port for HTTP
+      - transport.port=9300
+      - discovery.seed_hosts=master-1:9302,master-2:9303,master-3:9304
+      # By default this list is empty, meaning that this node expects to join a cluster that has already been bootstrapped
+      - cluster.initial_master_nodes=master-1,master-2,master-3
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "ES_JAVA_OPTS=-Xms31g -Xmx31g -Des.enforce.bootstrap.checks=true -Des.transport.cname_in_publish_address=true" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+    volumes:
+      - /esdata/coordinating-node/data:/usr/share/elasticsearch/data
+    configs:
+      - source: coordinating-node.pem
+        target: /usr/share/elasticsearch/config/node.pem
+      - source: coordinating-node-key.pem
+        target: /usr/share/elasticsearch/config/node-key.pem
+    ports:
+      - 9200:9200
+      - 9300:9300
+      - 9600:9600 # required for Performance Analyzer
+    networks:
+      - esnet
+    deploy:
+      mode: global
+      resources:
+        limits:
+          cpus: '16'
+          memory: 64G
+        reservations:
+          cpus: '4'
+          memory: 4G
+      placement:
+        constraints:
+          - node.labels.coordinating-node==true
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+ 
+  data-11:
+    image: nexus.ubssdic.com:9443/opendistro-for-elasticsearch:1.13.1
+    hostname: data-11
+    environment:
+      - cluster.name=udic-odfe
+      - node.name=data-11
+      - node.attr.rack_id=rack_01
+      # data nodes
+      - node.master=false
+      - node.data=true
+      - node.ingest=false  
+      - http.port=9211  # custom port for HTTP
+      - transport.port=9311
+      - discovery.seed_hosts=master-1:9302,master-2:9303,master-3:9304
+      - cluster.initial_master_nodes=master-1,master-2,master-3
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "ES_JAVA_OPTS=-Xms31g -Xmx31g -Des.enforce.bootstrap.checks=true -Des.transport.cname_in_publish_address=true" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+    volumes:
+      - /esdata/data-node-x1/data:/usr/share/elasticsearch/data
+    configs:
+      - source: data-node.pem
+        target: /usr/share/elasticsearch/config/node.pem
+      - source: data-node-key.pem
+        target: /usr/share/elasticsearch/config/node-key.pem
+    networks:
+      - esnet
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '8'
+          memory: 64G
+        reservations:
+          cpus: '2'
+          memory: 4G
+      placement:
+        constraints:
+          - node.labels.data-node==true
+          - node.hostname==elk1.ubssdic.com
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+ 
+  data-12:
+    image: nexus.ubssdic.com:9443/opendistro-for-elasticsearch:1.13.1
+    hostname: data-12
+    environment:
+      - cluster.name=udic-odfe
+      - node.name=data-12
+      - node.attr.rack_id=rack_01
+      # data nodes
+      - node.master=false
+      - node.data=true
+      - node.ingest=false  
+      - http.port=9212  # custom port for HTTP
+      - transport.port=9312
+      - discovery.seed_hosts=master-1:9302,master-2:9303,master-3:9304
+      - cluster.initial_master_nodes=master-1,master-2,master-3
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "ES_JAVA_OPTS=-Xms31g -Xmx31g -Des.enforce.bootstrap.checks=true -Des.transport.cname_in_publish_address=true" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+    volumes:
+      - /esdata/data-node-x2/data:/usr/share/elasticsearch/data
+    configs:
+      - source: data-node.pem
+        target: /usr/share/elasticsearch/config/node.pem
+      - source: data-node-key.pem
+        target: /usr/share/elasticsearch/config/node-key.pem
+    networks:
+      - esnet
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '8'
+          memory: 64G
+        reservations:
+          cpus: '2'
+          memory: 4G
+      placement:
+        constraints:
+          - node.labels.data-node==true
+          - node.hostname==elk1.ubssdic.com
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+ 
+  data-13:
+    image: nexus.ubssdic.com:9443/opendistro-for-elasticsearch:1.13.1
+    hostname: data-13
+    environment:
+      - cluster.name=udic-odfe
+      - node.name=data-13
+      - node.attr.rack_id=rack_01
+      # data nodes
+      - node.master=false
+      - node.data=true
+      - node.ingest=false  
+      - http.port=9213  # custom port for HTTP
+      - transport.port=9313
+      - discovery.seed_hosts=master-1:9302,master-2:9303,master-3:9304
+      - cluster.initial_master_nodes=master-1,master-2,master-3
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "ES_JAVA_OPTS=-Xms31g -Xmx31g -Des.enforce.bootstrap.checks=true -Des.transport.cname_in_publish_address=true" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+    volumes:
+      - /esdata/data-node-x3/data:/usr/share/elasticsearch/data
+    configs:
+      - source: data-node.pem
+        target: /usr/share/elasticsearch/config/node.pem
+      - source: data-node-key.pem
+        target: /usr/share/elasticsearch/config/node-key.pem
+    networks:
+      - esnet
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '8'
+          memory: 64G
+        reservations:
+          cpus: '2'
+          memory: 4G
+      placement:
+        constraints:
+          - node.labels.data-node==true
+          - node.hostname==elk1.ubssdic.com
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+ 
+  data-14:
+    image: nexus.ubssdic.com:9443/opendistro-for-elasticsearch:1.13.1
+    hostname: data-14
+    environment:
+      - cluster.name=udic-odfe
+      - node.name=data-14
+      - node.attr.rack_id=rack_01
+      # data nodes
+      - node.master=false
+      - node.data=true
+      - node.ingest=false  
+      - http.port=9214  # custom port for HTTP
+      - transport.port=9314
+      - discovery.seed_hosts=master-1:9302,master-2:9303,master-3:9304
+      - cluster.initial_master_nodes=master-1,master-2,master-3
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "ES_JAVA_OPTS=-Xms31g -Xmx31g -Des.enforce.bootstrap.checks=true -Des.transport.cname_in_publish_address=true" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+    volumes:
+      - /esdata/data-node-x4/data:/usr/share/elasticsearch/data
+    configs:
+      - source: data-node.pem
+        target: /usr/share/elasticsearch/config/node.pem
+      - source: data-node-key.pem
+        target: /usr/share/elasticsearch/config/node-key.pem
+    networks:
+      - esnet
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '8'
+          memory: 64G
+        reservations:
+          cpus: '2'
+          memory: 4G
+      placement:
+        constraints:
+          - node.labels.data-node==true
+          - node.hostname==elk1.ubssdic.com
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+ 
+  data-21:
+    image: nexus.ubssdic.com:9443/opendistro-for-elasticsearch:1.13.1
+    hostname: data-21
+    environment:
+      - cluster.name=udic-odfe
+      - node.name=data-21
+      - node.attr.rack_id=rack_02
+      # master-eligible data nodes
+      - node.master=false
+      - node.data=true
+      - node.ingest=false  
+      - http.port=9221  # custom port for HTTP
+      - transport.port=9321
+      - discovery.seed_hosts=master-1:9302,master-2:9303,master-3:9304
+      - cluster.initial_master_nodes=master-1,master-2,master-3
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "ES_JAVA_OPTS=-Xms31g -Xmx31g -Des.enforce.bootstrap.checks=true -Des.transport.cname_in_publish_address=true" 
+    volumes:
+      - /esdata/data-node-x1/data:/usr/share/elasticsearch/data
+    configs:
+      - source: data-node.pem
+        target: /usr/share/elasticsearch/config/node.pem
+      - source: data-node-key.pem
+        target: /usr/share/elasticsearch/config/node-key.pem
+    networks:
+      - esnet
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '8'
+          memory: 64G
+        reservations:
+          cpus: '2'
+          memory: 4G
+      placement:
+        constraints:
+          - node.labels.data-node==true
+          - node.hostname==elk2.ubssdic.com
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+ 
+  data-22:
+    image: nexus.ubssdic.com:9443/opendistro-for-elasticsearch:1.13.1
+    hostname: data-22
+    environment:
+      - cluster.name=udic-odfe
+      - node.name=data-22
+      - node.attr.rack_id=rack_02
+      # master-eligible data nodes
+      - node.master=false
+      - node.data=true
+      - node.ingest=false  
+      - http.port=9222  # custom port for HTTP
+      - transport.port=9322
+      - discovery.seed_hosts=master-1:9302,master-2:9303,master-3:9304
+      - cluster.initial_master_nodes=master-1,master-2,master-3
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "ES_JAVA_OPTS=-Xms31g -Xmx31g -Des.enforce.bootstrap.checks=true -Des.transport.cname_in_publish_address=true" 
+    volumes:
+      - /esdata/data-node-x2/data:/usr/share/elasticsearch/data
+    configs:
+      - source: data-node.pem
+        target: /usr/share/elasticsearch/config/node.pem
+      - source: data-node-key.pem
+        target: /usr/share/elasticsearch/config/node-key.pem
+    networks:
+      - esnet
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '8'
+          memory: 64G
+        reservations:
+          cpus: '2'
+          memory: 4G
+      placement:
+        constraints:
+          - node.labels.data-node==true
+          - node.hostname==elk2.ubssdic.com
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+ 
+  data-23:
+    image: nexus.ubssdic.com:9443/opendistro-for-elasticsearch:1.13.1
+    hostname: data-23
+    environment:
+      - cluster.name=udic-odfe
+      - node.name=data-23
+      - node.attr.rack_id=rack_02
+      # master-eligible data nodes
+      - node.master=false
+      - node.data=true
+      - node.ingest=false  
+      - http.port=9223  # custom port for HTTP
+      - transport.port=9323
+      - discovery.seed_hosts=master-1:9302,master-2:9303,master-3:9304
+      - cluster.initial_master_nodes=master-1,master-2,master-3
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "ES_JAVA_OPTS=-Xms31g -Xmx31g -Des.enforce.bootstrap.checks=true -Des.transport.cname_in_publish_address=true" 
+    volumes:
+      - /esdata/data-node-x3/data:/usr/share/elasticsearch/data
+    configs:
+      - source: data-node.pem
+        target: /usr/share/elasticsearch/config/node.pem
+      - source: data-node-key.pem
+        target: /usr/share/elasticsearch/config/node-key.pem
+    networks:
+      - esnet
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '8'
+          memory: 64G
+        reservations:
+          cpus: '2'
+          memory: 4G
+      placement:
+        constraints:
+          - node.labels.data-node==true
+          - node.hostname==elk2.ubssdic.com
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+ 
+  data-24:
+    image: nexus.ubssdic.com:9443/opendistro-for-elasticsearch:1.13.1
+    hostname: data-24
+    environment:
+      - cluster.name=udic-odfe
+      - node.name=data-24
+      - node.attr.rack_id=rack_02
+      # master-eligible data nodes
+      - node.master=false
+      - node.data=true
+      - node.ingest=false  
+      - http.port=9224  # custom port for HTTP
+      - transport.port=9324
+      - discovery.seed_hosts=master-1:9302,master-2:9303,master-3:9304
+      - cluster.initial_master_nodes=master-1,master-2,master-3
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "ES_JAVA_OPTS=-Xms31g -Xmx31g -Des.enforce.bootstrap.checks=true -Des.transport.cname_in_publish_address=true" 
+    volumes:
+      - /esdata/data-node-x4/data:/usr/share/elasticsearch/data
+    configs:
+      - source: data-node.pem
+        target: /usr/share/elasticsearch/config/node.pem
+      - source: data-node-key.pem
+        target: /usr/share/elasticsearch/config/node-key.pem
+    networks:
+      - esnet
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '8'
+          memory: 64G
+        reservations:
+          cpus: '2'
+          memory: 4G
+      placement:
+        constraints:
+          - node.labels.data-node==true
+          - node.hostname==elk2.ubssdic.com
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+ 
+  data-31:
+    image: nexus.ubssdic.com:9443/opendistro-for-elasticsearch:1.13.1
+    hostname: data-31
+    environment:
+      - cluster.name=udic-odfe
+      - node.name=data-31
+      - node.attr.rack_id=rack_03
+      # master-eligible data nodes
+      - node.master=false
+      - node.data=true
+      - node.ingest=false  
+      - http.port=9231  # custom port for HTTP
+      - transport.port=9331
+      - discovery.seed_hosts=master-1:9302,master-2:9303,master-3:9304
+      - cluster.initial_master_nodes=master-1,master-2,master-3
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "ES_JAVA_OPTS=-Xms31g -Xmx31g -Des.enforce.bootstrap.checks=true -Des.transport.cname_in_publish_address=true" 
+    volumes:
+      - /esdata/data-node-x1/data:/usr/share/elasticsearch/data
+    configs:
+      - source: data-node.pem
+        target: /usr/share/elasticsearch/config/node.pem
+      - source: data-node-key.pem
+        target: /usr/share/elasticsearch/config/node-key.pem
+    networks:
+      - esnet
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '8'
+          memory: 64G
+        reservations:
+          cpus: '2'
+          memory: 4G
+      placement:
+        constraints:
+          - node.labels.data-node==true
+          - node.hostname==elk3.ubssdic.com
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+ 
+  data-32:
+    image: nexus.ubssdic.com:9443/opendistro-for-elasticsearch:1.13.1
+    hostname: data-32
+    environment:
+      - cluster.name=udic-odfe
+      - node.name=data-32
+      - node.attr.rack_id=rack_03
+      # master-eligible data nodes
+      - node.master=false
+      - node.data=true
+      - node.ingest=false  
+      - http.port=9232  # custom port for HTTP
+      - transport.port=9332
+      - discovery.seed_hosts=master-1:9302,master-2:9303,master-3:9304
+      - cluster.initial_master_nodes=master-1,master-2,master-3
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "ES_JAVA_OPTS=-Xms31g -Xmx31g -Des.enforce.bootstrap.checks=true -Des.transport.cname_in_publish_address=true" 
+    volumes:
+      - /esdata/data-node-x2/data:/usr/share/elasticsearch/data
+    configs:
+      - source: data-node.pem
+        target: /usr/share/elasticsearch/config/node.pem
+      - source: data-node-key.pem
+        target: /usr/share/elasticsearch/config/node-key.pem
+    networks:
+      - esnet
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '8'
+          memory: 64G
+        reservations:
+          cpus: '2'
+          memory: 4G
+      placement:
+        constraints:
+          - node.labels.data-node==true
+          - node.hostname==elk3.ubssdic.com
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+ 
+  data-33:
+    image: nexus.ubssdic.com:9443/opendistro-for-elasticsearch:1.13.1
+    hostname: data-33
+    environment:
+      - cluster.name=udic-odfe
+      - node.name=data-33
+      - node.attr.rack_id=rack_03
+      # master-eligible data nodes
+      - node.master=false
+      - node.data=true
+      - node.ingest=false  
+      - http.port=9233  # custom port for HTTP
+      - transport.port=9333
+      - discovery.seed_hosts=master-1:9302,master-2:9303,master-3:9304
+      - cluster.initial_master_nodes=master-1,master-2,master-3
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "ES_JAVA_OPTS=-Xms31g -Xmx31g -Des.enforce.bootstrap.checks=true -Des.transport.cname_in_publish_address=true" 
+    volumes:
+      - /esdata/data-node-x3/data:/usr/share/elasticsearch/data
+    configs:
+      - source: data-node.pem
+        target: /usr/share/elasticsearch/config/node.pem
+      - source: data-node-key.pem
+        target: /usr/share/elasticsearch/config/node-key.pem
+    networks:
+      - esnet
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '8'
+          memory: 64G
+        reservations:
+          cpus: '2'
+          memory: 4G
+      placement:
+        constraints:
+          - node.labels.data-node==true
+          - node.hostname==elk3.ubssdic.com
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+ 
+  data-34:
+    image: nexus.ubssdic.com:9443/opendistro-for-elasticsearch:1.13.1
+    hostname: data-34
+    environment:
+      - cluster.name=udic-odfe
+      - node.name=data-34
+      - node.attr.rack_id=rack_03
+      # master-eligible data nodes
+      - node.master=false
+      - node.data=true
+      - node.ingest=false  
+      - http.port=9234  # custom port for HTTP
+      - transport.port=9334
+      - discovery.seed_hosts=master-1:9302,master-2:9303,master-3:9304
+      - cluster.initial_master_nodes=master-1,master-2,master-3
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "ES_JAVA_OPTS=-Xms31g -Xmx31g -Des.enforce.bootstrap.checks=true -Des.transport.cname_in_publish_address=true" 
+    volumes:
+      - /esdata/data-node-x4/data:/usr/share/elasticsearch/data
+    configs:
+      - source: data-node.pem
+        target: /usr/share/elasticsearch/config/node.pem
+      - source: data-node-key.pem
+        target: /usr/share/elasticsearch/config/node-key.pem
+    networks:
+      - esnet
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '8'
+          memory: 64G
+        reservations:
+          cpus: '2'
+          memory: 4G
+      placement:
+        constraints:
+          - node.labels.data-node==true
+          - node.hostname==elk3.ubssdic.com
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+ 
+  ingest-1:
+    image: nexus.ubssdic.com:9443/opendistro-for-elasticsearch:1.13.1
+    hostname: ingest-1
+    environment:
+      - cluster.name=udic-odfe
+      - node.name=ingest-1
+      - node.attr.rack_id=rack_01
+      # ingest nodes
+      - node.master=false
+      - node.data=false
+      - node.ingest=true  
+      - http.port=9291  # custom port for HTTP
+      - transport.port=9391
+      - discovery.seed_hosts=master-1:9302,master-2:9303,master-3:9304
+      - cluster.initial_master_nodes=master-1,master-2,master-3
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "ES_JAVA_OPTS=-Xms31g -Xmx31g -Des.enforce.bootstrap.checks=true -Des.transport.cname_in_publish_address=true" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+    volumes:
+      - /esdata/ingest-node/data:/usr/share/elasticsearch/data
+    configs:
+      - source: ingest-node.pem
+        target: /usr/share/elasticsearch/config/node.pem
+      - source: ingest-node-key.pem
+        target: /usr/share/elasticsearch/config/node-key.pem
+    networks:
+      - esnet
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '8'
+          memory: 64G
+        reservations:
+          cpus: '2'
+          memory: 4G
+      placement:
+        constraints:
+          - node.labels.ingest-node==true
+          - node.hostname==elk1.ubssdic.com
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+ 
+  ingest-2:
+    image: nexus.ubssdic.com:9443/opendistro-for-elasticsearch:1.13.1
+    hostname: ingest-2
+    environment:
+      - cluster.name=udic-odfe
+      - node.name=ingest-2
+      - node.attr.rack_id=rack_02
+      # master-eligible ingest nodes
+      - node.master=false
+      - node.data=false
+      - node.ingest=true  
+      - http.port=9292  # custom port for HTTP
+      - transport.port=9392
+      - discovery.seed_hosts=master-1:9302,master-2:9303,master-3:9304
+      - cluster.initial_master_nodes=master-1,master-2,master-3
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "ES_JAVA_OPTS=-Xms31g -Xmx31g -Des.enforce.bootstrap.checks=true -Des.transport.cname_in_publish_address=true" 
+    volumes:
+      - /esdata/ingest-node/data:/usr/share/elasticsearch/data
+    configs:
+      - source: ingest-node.pem
+        target: /usr/share/elasticsearch/config/node.pem
+      - source: ingest-node-key.pem
+        target: /usr/share/elasticsearch/config/node-key.pem
+    networks:
+      - esnet
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '8'
+          memory: 64G
+        reservations:
+          cpus: '2'
+          memory: 4G
+      placement:
+        constraints:
+          - node.labels.ingest-node==true
+          - node.hostname==elk2.ubssdic.com
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+ 
+  ingest-3:
+    image: nexus.ubssdic.com:9443/opendistro-for-elasticsearch:1.13.1
+    hostname: ingest-3
+    environment:
+      - cluster.name=udic-odfe
+      - node.name=ingest-3
+      - node.attr.rack_id=rack_03
+      # master-eligible ingest nodes
+      - node.master=false
+      - node.data=false
+      - node.ingest=true  
+      - http.port=9293  # custom port for HTTP
+      - transport.port=9393
+      - discovery.seed_hosts=master-1:9302,master-2:9303,master-3:9304
+      - cluster.initial_master_nodes=master-1,master-2,master-3
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "ES_JAVA_OPTS=-Xms31g -Xmx31g -Des.enforce.bootstrap.checks=true -Des.transport.cname_in_publish_address=true" 
+    volumes:
+      - /esdata/ingest-node/data:/usr/share/elasticsearch/data
+    configs:
+      - source: ingest-node.pem
+        target: /usr/share/elasticsearch/config/node.pem
+      - source: ingest-node-key.pem
+        target: /usr/share/elasticsearch/config/node-key.pem
+    networks:
+      - esnet
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '8'
+          memory: 64G
+        reservations:
+          cpus: '2'
+          memory: 4G
+      placement:
+        constraints:
+          - node.labels.ingest-node==true
+          - node.hostname==elk3.ubssdic.com
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+ 
+  kibana:
+    image: nexus.ubssdic.com:8445/amazon/opendistro-for-elasticsearch-kibana:1.13.1
+    # container_name: kibana
+    hostname: kibana
+    ports:
+      - 5601:5601
+    environment:
+      ELASTICSEARCH_URL: https://coordinating:9200
+      ELASTICSEARCH_HOSTS: https://coordinating:9200
+      ELASTICSEARCH_USERNAME: kibanaserver
+      ELASTICSEARCH_PASSWORD: Ubssdic0
+      SERVER_SSL_ENABLED: "true"
+      ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES: /usr/share/kibana/config/root-ca.pem
+      SERVER_SSL_CERTIFICATE: /usr/share/kibana/config/node.pem
+      SERVER_SSL_KEY: /usr/share/kibana/config/node-key.pem
+    configs:
+      # - source: kibana.yml
+      #   target: /usr/share/kibana/config/kibana.yml
+      - source: kibana.pem
+        target: /usr/share/kibana/config/node.pem
+      - source: kibana-key.pem
+        target: /usr/share/kibana/config/node-key.pem
+      - source: root-ca.pem
+        target: /usr/share/kibana/config/root-ca.pem
+    networks:
+      - esnet
+    deploy:
+      mode: global
+      resources:
+        limits:
+          cpus: '4'
+          memory: 2G
+      placement:
+        constraints:
+          - node.labels.vip-group==true
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  cerebro:
+    image: nexus.ubssdic.com:8445/lmenezes/cerebro:latest
+    # container_name: cerebro
+    hostname: cerebro
+    ports:
+      - "9000:9000"
+    configs:
+      - source: application.conf
+        target: /opt/cerebro/conf/application.conf
+      - source: root-ca.pem
+        target: /opt/cerebro/conf/root-ca.pem
+    networks:
+      - esnet
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  es_exporter:
+    image: nexus.ubssdic.com:8445/justwatch/elasticsearch_exporter:1.1.0
+    hostname: es_exporter
+    command: '--es.uri=https://coordinating:9200 --es.all --es.cluster_settings --es.indices --es.indices_settings --es.shards --es.snapshots --es.ca=/usr/share/root-ca.pem --es.client-private-key=/usr/share/node-key.pem --es.client-cert=/usr/share/node.pem'
+    # command: '--es.uri=https://coordinating:9200 --es.ca=/usr/share/root-ca.pem --es.client-private-key=/usr/share/node-key.pem --es.client-cert=/usr/share/node.pem'
+    configs:
+      - source: client.pem
+        target: /usr/share/node.pem
+      - source: client-key.pem
+        target: /usr/share/node-key.pem
+      - source: root-ca.pem
+        target: /usr/share/root-ca.pem
+    ports:
+      - 9114:9114
+    networks:
+      - esnet
+    deploy:
+      mode: global
+      resources:
+        limits:
+          cpus: '1'
+          memory: 64M
+        reservations:
+          cpus: '0.1'
+          memory: 16M
+      placement:
+        constraints:
+          - node.labels.vip-group==true
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+networks:
+  esnet:
+    driver: overlay
+    external: true
+    name: esnet
+  hostnet:
+    external: true
+    name: host
+
+# configs
+configs:
+  # security configuration files
+  master-node.pem:
+    file: ./ssl-key/master-node.pem
+  master-node-key.pem:
+    file: ./ssl-key/master-node-key.pem
+  coordinating-node.pem:
+    file: ./ssl-key/coordinating.pem
+  coordinating-node-key.pem:
+    file: ./ssl-key/coordinating-key.pem
+  data-node.pem:
+    file: ./ssl-key/data-node.pem
+  data-node-key.pem:
+    file: ./ssl-key/data-node-key.pem
+  ingest-node.pem:
+    file: ./ssl-key/ingest-node.pem
+  ingest-node-key.pem:
+    file: ./ssl-key/ingest-node-key.pem
+  kibana.pem:
+    file: ./ssl-key/kibana.pem
+  kibana-key.pem:
+    file: ./ssl-key/kibana-key.pem
+  logstash.pem:
+    file: ./ssl-key/logstash.pem
+  logstash-key.pem:
+    file: ./ssl-key/logstash-key.pem
+  kibana.yml:
+    file: ./config/kibana.yml
+  root-ca.pem:
+    file: ./ssl-key/root-ca.pem
+  application.conf:
+    file: ./config/application.conf
+  ufos.conf:
+    file: ./logstash/pipeline/ufos.conf
+  hsfw.conf:
+    file: ./logstash/pipeline/hsfw.conf
+  syslog.conf:
+    file: ./logstash/pipeline/syslog.conf
+  imwaf.conf:
+    file: ./logstash/pipeline/imwaf.conf
+  pipelines.yml:
+    file: ./logstash/config/pipelines.yml
+  logstash.yml:
+    file: ./logstash/config/logstash.yml
+  client.pem:
+    file: ./ssl-key/admin.pem
+  client-key.pem:
+    file: ./ssl-key/admin-key.pem
+

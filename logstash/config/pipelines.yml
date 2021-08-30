@@ -1,0 +1,28 @@
+# This file is where you define your pipelines. You can define multiple.
+# For more information on multiple pipelines, see the documentation:
+#   https://www.elastic.co/guide/en/logstash/current/multiple-pipelines.html
+
+- pipeline.id: ufos-pipeline
+  path.config: "/usr/share/logstash/pipeline/ufos.conf"
+  queue.max_bytes: 4gb
+  pipeline.workers: 6
+- pipeline.id: hsfw-pipeline
+  path.config: "/usr/share/logstash/pipeline/hsfw.conf"
+  queue.max_bytes: 4gb
+  pipeline.workers: 6
+- pipeline.id: imwaf-pipeline
+  path.config: "/usr/share/logstash/pipeline/imwaf.conf"
+  pipeline.workers: 1
+- pipeline.id: ips-pipeline
+  path.config: "/usr/share/logstash/pipeline/ips.conf"
+  pipeline.workers: 1
+- pipeline.id: cpfw-pipeline
+  path.config: "/usr/share/logstash/pipeline/cpfw.conf"
+  queue.max_bytes: 4gb
+  pipeline.workers: 6
+#- pipeline.id: hsfw2
+#  path.config: "/usr/share/logstash/pipeline/hsfw2.conf"
+#  pipeline.workers: 2
+#- pipeline.id: syslog-pipeline
+#  path.config: "/usr/share/logstash/pipeline/syslog.conf"
+#  pipeline.workers: 3

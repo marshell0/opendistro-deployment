@@ -1,0 +1,26 @@
+config:
+  reload:
+    automatic: true
+    interval: 20s
+#  debug: true
+#  support_escapes: true
+http:
+  host: 0.0.0.0
+  port: 9610
+log:
+  level: info
+#path:
+#  config: /usr/share/logstash/pipeline
+# pipeline:
+  # if there no machine settin in pipelines.yml, will fall back to the default specified in the logstash.yml
+  # id: main
+  # workers: 4
+  # batch:
+    #size: 500 # default is 125
+    # delay: 50
+queue:
+  max_bytes: 4096mb
+  drain: true
+dead_letter_queue:
+  enable: true
+  max_bytes: 1024mb

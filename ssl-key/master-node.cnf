@@ -1,0 +1,24 @@
+[req]
+distinguished_name = req_distinguished_name
+x509_extensions = v3_req
+prompt = no
+[req_distinguished_name]
+C = CN
+ST = GD
+L = SHENZHEN
+O = XXXXXX
+OU = ITDEPT
+CN = master
+[v3_req]
+keyUsage = critical, keyEncipherment, dataEncipherment, digitalSignature
+extendedKeyUsage = serverAuth, clientAuth
+subjectAltName = @alt_names
+[alt_names]
+DNS.1 = master
+DNS.2 = tasks.master
+DNS.3 = master-1
+DNS.4 = tasks.master-1
+DNS.5 = master-2
+DNS.6 = tasks.master-2
+DNS.7 = master-3
+DNS.8 = tasks.master-3
