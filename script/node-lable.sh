@@ -1,0 +1,14 @@
+docker node update --label-add vip-group=true elk1.my-domain.com
+docker node update --label-add vip-group=true elk2.my-domain.com
+docker node update --label-add master-node=true elk1.my-domain.com
+docker node update --label-add master-node=true elk2.my-domain.com
+docker node update --label-add master-node=true elk3.my-domain.com
+docker node update --label-add ingest-node=true elk1.my-domain.com
+docker node update --label-add ingest-node=true elk2.my-domain.com
+docker node update --label-add ingest-node=true elk3.my-domain.com
+docker node update --label-add data-node=true elk1.my-domain.com
+docker node update --label-add data-node=true elk2.my-domain.com
+docker node update --label-add data-node=true elk3.my-domain.com
+docker node update --label-add coordinating-node=true elk1.my-domain.com
+docker node update --label-add coordinating-node=true elk2.my-domain.com
+docker node update --label-add coordinating-node=true elk3.my-domain.com
